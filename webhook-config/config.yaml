@@ -1,0 +1,30 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook
+webhooks:
+- name: add-label.mutating-webhook.cluster.local
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    caBundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJaVENDQVF1Z0F3SUJBZ0lSQUtaVWF0SlZrcTV0OTNDTHRKNmZjd1F3Q2dZSUtvWkl6ajBFQXdJd0VqRVEKTUE0R0ExVUVBeE1IY205dmRDMWpZVEFlRncweU5UQTRNall5TWpRMk1qbGFGdzB5TlRFeE1qUXlNalEyTWpsYQpNQkl4RURBT0JnTlZCQU1UQjNKdmIzUXRZMkV3V1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVQ1Ck5KUFBwRkVyM25tVjljQmlqRjhPUlJ4cEdNazBONStqV2FsUEJLRERIU2Rhc3hGMlFpMEdUTWI5TkF0OXM0amsKWXNLZjRrMXNieGlvRzI0S2JUbXVvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBcVF3RHdZRFZSMFRBUUgvQkFVdwpBd0VCL3pBZEJnTlZIUTRFRmdRVXd6Q1JXc2J5by83UWd2Vk1PSnM1dUFhZW5Wd3dDZ1lJS29aSXpqMEVBd0lEClNBQXdSUUlnYUhURGlHczNFdnZYNzJJcFk0TXFibE5ZYyttVXhYV3NhQno1UjFjK1ByY0NJUURlN3hjMW4xRnEKZnhmSDhVRXEwcWFpODN5ekhSUnhDV01EaFVHZE9SWGNiQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    service:
+      namespace: admission-controller
+      name: mutating-webhook
+      path: /add-label
+  rules:
+    - operations: ["CREATE", "UPDATE"]
+      apiGroups: ["*"]
+      apiVersions: ["*"]
+      resources: ['*']
+      scope: "Namespaced"
+  matchConditions:
+    - name: 'exclude-leases'
+      expression: '!(request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")' # Match non-lease resources.
+    - name: 'exclude-kubelet-requests'
+      expression: '!("system:nodes" in request.userInfo.groups)' # Match requests made by non-node users.
+    - name: 'exclude-admission-controller-namespace'
+      expression: '!(has(request.namespace) && request.namespace == "admission-controller")' # Match requests from admission-controller namespace.
+    - name: 'exclude-events'
+      expression: '!(request.kind.kind == "Event")' # Ignore patching Events.

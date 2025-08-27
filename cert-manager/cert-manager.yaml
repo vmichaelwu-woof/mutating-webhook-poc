@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admission-controller
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cluster-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: root-ca
+  namespace: admission-controller
+spec:
+  isCA: true
+  commonName: root-ca
+  secretName: root-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: cluster-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: root-ca
+  namespace: admission-controller
+spec:
+  ca:
+    secretName: root-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mutating-webhook
+  namespace: admission-controller
+spec:
+  secretName: mutating-webhook
+  issuerRef:
+    name: root-ca
+    kind: Issuer
+  commonName: mutating-webhook.admission-controller.svc
+  dnsNames:
+    - mutating-webhook.admission-controller.svc
+    - mutating-webhook.admission-controller.svc.cluster.local
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - server auth

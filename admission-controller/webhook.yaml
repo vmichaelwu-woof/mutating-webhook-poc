@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admission-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mutating-webhook
+  namespace: admission-controller
+  labels:
+    app: mutating-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mutating-webhook
+  template:
+    metadata:
+      labels:
+        app: mutating-webhook
+    spec:
+      serviceAccountName: mutating-webhook
+      volumes:
+      - name: certificates
+        secret:
+          secretName: mutating-webhook
+      containers:
+      - name: mutating-webhook
+        image: mutating-webhook:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 443
+        env:
+        - name: PORT
+          value: "443"
+        - name: TLS
+          value: "true"
+        volumeMounts: 
+          - name: certificates
+            readOnly: true
+            mountPath: "/etc/mutating-webhook/tls/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mutating-webhook
+  namespace: admission-controller
+spec:
+  selector:
+    app: mutating-webhook
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 443
+  type: ClusterIP
